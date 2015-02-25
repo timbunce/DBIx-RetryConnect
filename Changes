@@ -1,0 +1,5 @@
+Changes file for DBIx::RetryConnect
+
+{{$NEXT}}
+
+  - the first release
