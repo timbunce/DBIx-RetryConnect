@@ -121,10 +121,6 @@ sub import {
     croak "No drivers specified"
         unless @imports;
 
-        # default is ok if all previous are default
-        # hash is ok if no previous
-        # sub is ok if no previous hash or default
- 
     while (my $dbd = shift @imports) {
         my $options = (@imports && ref $imports[0]) ? shift @imports : sub { {} };
 
@@ -154,6 +150,7 @@ sub install_retry_connect {
 
     my $connect_method = "DBD::${dbd}::dr::connect";
 
+    ## no critic (ProhibitNoStrict)
     my $orig_connect_subref = do { no strict 'refs'; *$connect_method{CODE} }
         or croak "$connect_method not defined";
 
@@ -179,8 +176,8 @@ sub install_retry_connect {
     };
 
     do {
-        no warnings 'redefine';
-        no strict 'refs';
+        no warnings 'redefine';    ## no critic (ProhibitNoWarnings)
+        no strict 'refs';          ## no critic (ProhibitNoStrict)
         *$connect_method = $retry_connect_subref;
     };
 
@@ -200,15 +197,8 @@ sub pick_retry_options_from_configs {
 }
 
 
-=head2 Multiple Usage
-
-Currently DBIx::RetryConnect should only be used once per driver per application.
-Subsequent usage will generate a warning. This may change.
-
-=cut
-
 {
-package DBIx::RetryConnect::RetryState;
+package DBIx::RetryConnect::RetryState; ## no critic (ProhibitMultiplePackages)
 
 use Carp qw(carp croak);
 use Time::HiRes qw(usleep);
@@ -236,7 +226,7 @@ sub new {
     if ($self->{verbose} >= 2) {
         my @ca = @{$self->{connect_args}};
         local $self->{connect_args} = "$ca[0]->{Name}:$ca[1]"; # just the driver and dsn, hide password
-        my $kv = DBI::_concat_hash_sorted($self, "=", ", ", 1, undef);
+        my $kv = DBI::_concat_hash_sorted($self, "=", ", ", 1, undef); ## no critic (ProtectPrivateSubs)
         carp "$class $kv";
     }
 
@@ -264,8 +254,8 @@ sub calculate_next_delay {
             if $self->{verbose} >= 4;
 
         # fudge %Carp::Internal so the carp shows a more useful caller
-        local $Carp::Internal{'DBI'} = 1;
-        local $Carp::Internal{'DBIx::RetryConnect'} = 1;
+        local $Carp::Internal{'DBI'} = 1;                ## no critic (ProhibitPackageVars)
+        local $Carp::Internal{'DBIx::RetryConnect'} = 1; ## no critic (ProhibitPackageVars)
         my ($drh, $dsn) = @{$self->{connect_args}};
         carp sprintf "DBIx::RetryConnect(%s:%s): sleeping for %.2gs after error: %s%s",
                 $drh->{Name}, $dsn, $this_delay, $drh->errstr, $extra;
