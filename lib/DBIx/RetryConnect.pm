@@ -16,8 +16,17 @@ DBIx::RetryConnect - automatically retry DBI connect() with exponential backoff
 
     use DBIx::RetryConnect Pg => sub { # set options dynamically for Pg connections
         my ($drh, $dsn, $user, $password, $attrib) = @_;
-        return undef if ... # don't do retry for this connection
-        return { ... retry options to use ... };
+
+        # return undef to not retry for this connection
+
+        # don't retry unless we're connecting to a specific database
+        return undef if $dsn !~ /foo/;
+
+        # don't retry for errors that don't include "server" in the message
+        return undef if $drh->errstr !~ /server/i;
+
+        # or return a hash ref containing the retry options to use
+        return { ... };
     };
 
 =head1 DESCRIPTION
@@ -47,7 +56,7 @@ then used to configure the retry behaviour for that connection retry.
 =head2 Randomization
 
 Wherever the documentation talks about the duration of a delay the I<actual>
-delay is a random value between 50% and 100% of this value. This randomization
+delay is a random value between 75% and 100% of this value. This randomization
 helps avoid a "thundering herd" where many systems might attempt to reconnect
 at the same time.
 
@@ -72,8 +81,7 @@ attempt failed (default 0.1).
 For each subsequent attempt while retrying a connection the delay duration,
 which started with L</start_delay>, is multiplied by L</backoff_factor>.
 
-The default is 3. Use the value 2 if you want a strict exponential backoff,
-but 3 seems to work better in general, i.e. fewer connection attempts.
+The default is 2, which provides the common "exponential backoff" behaviour.
 See also L</max_delay>.
 
 =head3 max_delay
@@ -211,26 +219,25 @@ sub new {
 
     my $self = bless {
         total_delay => 30,
+        start_delay => undef,
         next_delay => undef,
         max_delay => undef,
-        backoff_factor => 3, # 1, 3, 9, 27
+        backoff_factor => 2,
         verbose => $ENV{DBIX_RETRYCONNECT_VERBOSE} || 0,
         connect_args => $connect_args,
     } => $class;
     lock_keys(%$self);
 
-    $self->{next_delay} = delete($options->{start_delay}) || 0.1;
-
     $self->{$_} = $options->{$_} for keys %$options;
 
-    # calculated defaults
-    $self->{max_delay} ||= ($self->{total_delay} / 4);
+    $self->{next_delay} ||= $self->{start_delay} ||= 0.1; # 0.1 = 100ms
+    $self->{max_delay}  ||= ($self->{total_delay} / 4);
 
     if ($self->{verbose} >= 2) {
         my @ca = @{$self->{connect_args}};
         local $self->{connect_args} = "$ca[0]->{Name}:$ca[1]"; # just the driver and dsn, hide password
         my $kv = DBI::_concat_hash_sorted($self, "=", ", ", 1, undef);
-        carp "DBIx::RetryConnect::RetryState $kv";
+        carp "$class $kv";
     }
 
     return $self;
@@ -247,7 +254,7 @@ sub calculate_next_delay {
 
     # treat half the delay time as fixed and half as random
     # this helps avoid a thundering-herd problem
-    my $this_delay = ($self->{next_delay} / 2) + rand($self->{next_delay} / 2);
+    my $this_delay = ($self->{next_delay} * 0.75) + rand($self->{next_delay} * 0.25);
 
     if ($self->{verbose} >= 3) {
 
