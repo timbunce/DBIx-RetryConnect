@@ -5,8 +5,6 @@ requires 'perl', '5.010';
 requires 'DBI';
 
 on test => sub {
-   requires 'autodie';
-   requires 'Module::Pluggable';
    requires 'Test::More' => '0.98';
    requires 'Test::Most';
    requires 'Test::Pod';
