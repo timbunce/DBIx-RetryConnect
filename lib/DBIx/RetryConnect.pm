@@ -156,6 +156,10 @@ sub install_retry_connect {
 
     my $retry_state_class = "DBIx::RetryConnect::RetryState";
 
+    if (($ENV{DBIX_RETRYCONNECT_VERBOSE}||0) >= 2) {
+        carp __PACKAGE__." installing $retry_state_class hook into DBD::$dbd";
+    }
+
     my $retry_connect_subref = sub {
 
         my $retry;
@@ -257,8 +261,10 @@ sub calculate_next_delay {
         local $Carp::Internal{'DBI'} = 1;                ## no critic (ProhibitPackageVars)
         local $Carp::Internal{'DBIx::RetryConnect'} = 1; ## no critic (ProhibitPackageVars)
         my ($drh, $dsn) = @{$self->{connect_args}};
+        my $errstr = $drh->errstr;
+        $errstr = "(undef errstr)" if not defined $errstr;
         carp sprintf "DBIx::RetryConnect(%s:%s): sleeping for %.2gs after error: %s%s",
-                $drh->{Name}, $dsn, $this_delay, $drh->errstr, $extra;
+                $drh->{Name}, $dsn, $this_delay, $errstr, $extra;
     }
 
     $self->{total_delay} -= $this_delay;     # track actual remaining time
