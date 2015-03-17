@@ -27,4 +27,4 @@ after_success:
   - cover -report coveralls
 
 notifications:
-  irc: "irc.perl.org#webapi"
+  irc: "irc.perl.org#dbi"
