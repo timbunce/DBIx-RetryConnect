@@ -1,8 +1,6 @@
 package DBIx::RetryConnect;
 
-=head1 NAME
-
-DBIx::RetryConnect - automatically retry DBI connect() with exponential backoff
+# ABSTRACT: automatically retry DBI connect() with exponential backoff
 
 =head1 SYNOPSIS
 
